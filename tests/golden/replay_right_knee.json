@@ -1,0 +1,38 @@
+{
+  "_comment": "离线回放 samples/joint_angle_20260716_093022 的基准结果。tests/test_replay.py 用它做逐帧回归比对。",
+  "input": "samples/joint_angle_20260716_093022",
+  "calib_file": "temp/right_knee_pose_calib.json",
+  "calib_q_rel_0": [
+    0.6987713339291969,
+    0.7153292013072593,
+    0.0034864870788710416,
+    0.003255924412261894
+  ],
+  "_calib_note": "基准所用的零点，来自该次实拍当场的站立标定。tests/test_replay.py 会校验该文件未被改写。",
+  "fs": 100,
+
+  "joint_key": "right_knee",
+  "proximal_sensor": "R4",
+  "distal_sensor": "R5",
+  "proximal_device_id": "WT5500010112",
+  "distal_device_id": "WT5500010107",
+  "calibrated": true,
+  "calibration_mode": "lower_body_standing",
+
+  "sample_count": 1484,
+  "duration_s": 19.62,
+  "raw_sample_count": 3368,
+
+  "sync_matched_count": 1684,
+  "sync_dropped_proximal": 46,
+  "sync_dropped_distal": 46,
+  "sync_avg_dt_ms": 12.499,
+  "sync_max_dt_ms": 30,
+
+  "flexion_rom_deg": 140.34,
+  "flexion_max_deg": 82.95,
+  "flexion_min_deg": -57.39,
+
+  "recorded_baseline_rom_deg": 140.43,
+  "_baseline_note": "该录制当次实时会话（原项目 joint_rawdate/ 的 session_info）的 flexion_rom_deg。原件里的原始 CSV 只包含已配对的帧，且当时的实时配对并非近邻策略，因此重新同步会合法地丢掉约 46 对，ROM 有约 0.1° 的可解释差异。"
+}

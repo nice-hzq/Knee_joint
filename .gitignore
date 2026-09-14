@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.idea/
+.vscode/
+
+# 运行产物（temp/ 下的设备映射与标定文件是有效配置，保留在仓库中）
+data/

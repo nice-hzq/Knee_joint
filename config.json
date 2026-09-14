@@ -1,0 +1,31 @@
+{
+  "joint_key": "right_knee",
+  "fs": 100.0,
+
+  "serial": {
+    "port": "COM8",
+    "baud": 921600
+  },
+
+  "device_map": {},
+  "device_map_file": "temp/device_alias_map.json",
+
+  "output_root": "data",
+  "calib_dir": "temp",
+
+  "calib": {
+    "mode": "lower_body_standing",
+    "dur_s": 3.0
+  },
+
+  "sync": {
+    "max_dt_ms": 30.0
+  },
+
+  "kalman": {
+    "var_gyr": 0.09,
+    "var_acc": 0.25
+  },
+
+  "save_raw": true
+}

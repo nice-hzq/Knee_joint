@@ -1,0 +1,22 @@
+{
+  "joint_name": "right_knee",
+  "proximal_sensor": "R4",
+  "distal_sensor": "R5",
+  "calibration_mode": "lower_body_standing",
+  "q_rel_0": [
+    0.7039020401373888,
+    0.7102911880267267,
+    0.002044591004470224,
+    0.0020410168121535433
+  ],
+  "q_rel_0_kalman": [
+    0.7039473197238623,
+    0.7102462142583211,
+    0.0020621733294160223,
+    0.002057577817051873
+  ],
+  "zero_angle_deg": 0.0,
+  "calibration_duration_s": 3.0,
+  "created_time": "2026-09-11 15:57:18",
+  "sample_count": 300
+}
