@@ -379,6 +379,19 @@ class JointAngleApp:
             self._update_joint_device_display()
         self.joint_var.trace_add("write", _on_joint_change)
 
+        # ── 本次采集名称（用于原始数据与角度数据的共同会话目录）──
+        name_row = tk.Frame(content, bg=CARD_BG)
+        name_row.pack(fill="x", padx=12, pady=(2, 4))
+        tk.Label(name_row, text="名称", font=FONT_BODY, bg=CARD_BG,
+                 fg=TEXT_SECONDARY, width=4, anchor="w").pack(side="left")
+        self.session_name_var = tk.StringVar(value="")
+        self.session_name_entry = tk.Entry(
+            name_row, textvariable=self.session_name_var, width=20,
+            font=FONT_BODY, bg=CARD_BG, fg=TEXT_MAIN,
+            relief="solid", highlightbackground=BORDER,
+            highlightthickness=1, bd=0)
+        self.session_name_entry.pack(side="left", padx=2, ipady=2)
+
         # ── 传感器绑定显示（段标签 + 别名 + 设备 ID）──
         prox_row = tk.Frame(content, bg=CARD_BG)
         prox_row.pack(fill="x", padx=12, pady=(2, 2))
@@ -650,6 +663,7 @@ class JointAngleApp:
             self.btn_joint_device_map.config(state="normal")
             self.joint_cb.config(state="readonly")
             self.calib_mode_cb.config(state="readonly")
+            self.session_name_entry.config(state="normal")
 
         elif new_state == UIState.MEASURING:
             self._set_action_btn_state(self.btn_joint_start, False,
@@ -659,6 +673,7 @@ class JointAngleApp:
             self.btn_joint_device_map.config(state="disabled")
             self.joint_cb.config(state="disabled")
             self.calib_mode_cb.config(state="disabled")
+            self.session_name_entry.config(state="disabled")
             self._update_title_status("● 测量中", BADGE_BLUE_BG, BADGE_BLUE_TEXT)
 
         elif new_state == UIState.STOPPING:
@@ -667,6 +682,7 @@ class JointAngleApp:
             self._set_action_btn_state(self.btn_joint_stop, False,
                 "■  停止测量", "◌ 停止中", DANGER, DANGER_MUTED)
             self.btn_joint_device_map.config(state="disabled")
+            self.session_name_entry.config(state="disabled")
             self._update_title_status("◌ 停止中", BADGE_ORANGE_BG, BADGE_ORANGE_TEXT)
             self.status_progress.pack(side="right", padx=(0, 12), pady=3)
             self.status_progress.start(10)
@@ -678,6 +694,11 @@ class JointAngleApp:
         """启动实时关节角度测量。"""
         if self.state != UIState.IDLE:
             messagebox.showwarning("操作冲突", "请先停止当前测量再重新启动。")
+            return
+        session_name = self.session_name_var.get().strip()
+        if not session_name:
+            messagebox.showwarning("输入错误", "请输入本次采集名称，例如：深蹲测试01")
+            self.session_name_entry.focus_set()
             return
         if serial is None:
             messagebox.showerror("缺少依赖",
@@ -715,7 +736,7 @@ class JointAngleApp:
 
         self._transition_to(UIState.MEASURING)
         self.joint_status_var.set(f"● 连接中... {port}")
-        self.status_bar_var.set("关节角度测量启动中...")
+        self.status_bar_var.set(f"关节角度测量启动中... 采集名称: {session_name}")
         self._joint_reset_display()
         self._joint_calib_state = "uncalibrated"
         self._update_joint_calib_status()
@@ -737,6 +758,7 @@ class JointAngleApp:
             max_sync_dt_ms=float(cfg_sync.get("max_dt_ms", 30.0)),
             save_raw=bool(self.cfg.get("save_raw", True)),
             source_label=f"serial:{port}",
+            session_name=session_name,
             kalman_var_gyr=float(cfg_kalman.get("var_gyr", 0.3 ** 2)),
             kalman_var_acc=float(cfg_kalman.get("var_acc", 0.5 ** 2)))
         self.joint_thread.start()

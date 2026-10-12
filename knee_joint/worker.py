@@ -77,6 +77,7 @@ class JointWorker(threading.Thread):
                  calib_file: Optional[str] = None,
                  auto_calib_at_s: Optional[float] = None,
                  source_label: str = "serial",
+                 session_name: Optional[str] = None,
                  kalman_var_gyr: float = 0.3 ** 2,
                  kalman_var_acc: float = 0.5 ** 2):
         super().__init__(daemon=True)
@@ -96,6 +97,7 @@ class JointWorker(threading.Thread):
         self.calib_file = calib_file
         self.auto_calib_at_s = auto_calib_at_s
         self.source_label = source_label
+        self.session_name = str(session_name or "").strip() or joint_key
         self.kalman_var_gyr = float(kalman_var_gyr)
         self.kalman_var_acc = float(kalman_var_acc)
 
@@ -113,7 +115,8 @@ class JointWorker(threading.Thread):
         self._engine: Optional[JointAngleEngine] = None
         self._calib: Optional[JointCalibration] = None
         self._pairs = FrameSynchronizer(max_dt_ms=max_sync_dt_ms)
-        self._recorder = SessionRecorder(output_root, save_raw=save_raw)
+        self._recorder = SessionRecorder(
+            output_root, save_raw=save_raw, session_name=self.session_name)
 
         self._pending_calib = False
         self._pending_calib_mode = calib_mode

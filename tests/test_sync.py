@@ -17,7 +17,7 @@ import numpy as np
 
 from knee_joint.models import JointAngleState, JointCalibration
 from knee_joint.protocol import Frame, abs_u32_delta_ms, signed_u32_delta_ms
-from knee_joint.recorder import SessionRecorder
+from knee_joint.recorder import SessionRecorder, sanitize_session_name
 from knee_joint.sync import FrameSynchronizer
 
 
@@ -155,7 +155,7 @@ class RawDataSaveTests(unittest.TestCase):
             recorder.record_raw_row(row)
             recorder.close_raw()
 
-            expected_dir = os.path.join(temp_dir, "raw", "joint_angle_20260715_120000")
+            expected_dir = os.path.join(temp_dir, "raw", "session_20260715_120000")
             expected_file = os.path.join(expected_dir, "WT_TEST.csv")
             self.assertEqual(recorder.raw_dir, expected_dir)
             self.assertTrue(os.path.isfile(expected_file))
@@ -169,7 +169,9 @@ class RawDataSaveTests(unittest.TestCase):
 
     def test_session_writes_angles_and_meta(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            recorder = SessionRecorder(temp_dir, session_timestamp="20260715_120000")
+            recorder = SessionRecorder(
+                temp_dir, session_timestamp="20260715_120000",
+                session_name="深蹲 测试:01")
             state = JointAngleState(joint_name="left_knee")
             for i in range(5):
                 state.update(float(i), t=float(i) * 0.01)
@@ -187,6 +189,31 @@ class RawDataSaveTests(unittest.TestCase):
             self.assertEqual(info["sample_count"], 5)
             self.assertEqual(info["sync_matched_count"], 5)
             self.assertEqual(info["flexion_rom_deg"], 4.0)
+            self.assertEqual(info["session_name"], "深蹲 测试:01")
+            self.assertEqual(info["session_id"], "深蹲 测试_01_20260715_120000")
+            self.assertEqual(info["joint_angle_data_dir"], session_dir)
+            self.assertEqual(
+                os.path.dirname(session_dir),
+                os.path.join(temp_dir, "joint_angles"))
+
+    def test_duplicate_session_id_gets_incrementing_suffix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first = SessionRecorder(
+                temp_dir, session_timestamp="20260715_120000",
+                session_name="步行01")
+            os.makedirs(os.path.join(temp_dir, "raw", first.session_id))
+
+            second = SessionRecorder(
+                temp_dir, session_timestamp="20260715_120000",
+                session_name="步行01")
+
+            self.assertEqual(first.session_id, "步行01_20260715_120000")
+            self.assertEqual(second.session_id, "步行01_20260715_120000_02")
+
+    def test_session_name_sanitization_preserves_chinese_and_spaces(self):
+        self.assertEqual(sanitize_session_name("  张三 深蹲:第1组  "),
+                         "张三 深蹲_第1组")
+        self.assertEqual(sanitize_session_name("CON"), "session_CON")
 
     def test_insufficient_data_returns_none(self):
         with tempfile.TemporaryDirectory() as temp_dir:

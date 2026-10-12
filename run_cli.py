@@ -3,7 +3,7 @@
 膝关节角度测量 — 命令行入口（无界面）
 
 实时串口:
-    python run_cli.py --port COM8 --joint right_knee
+    python run_cli.py --port COM8 --joint right_knee --session-name "深蹲测试01"
 
 离线回放:
     python run_cli.py --replay samples/joint_angle_20260716_093022 \
@@ -73,6 +73,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     out = p.add_argument_group("输出")
     out.add_argument("--output", default=None, help="输出根目录（默认 ./data）")
+    out.add_argument("--session-name", default=None,
+                     help="本次采集名称；最终目录会自动追加时间戳（默认使用关节 key）")
     out.add_argument("--no-raw", action="store_true", help="不保存原始同步帧")
     out.add_argument("--quiet", action="store_true", help="不实时打印角度，只打印状态")
 
@@ -158,6 +160,7 @@ def main(argv=None) -> int:
     print(f"数据源: {source_label}")
     print(f"设备映射: {device_map or '（空 — 将等待 device_alias_map.json）'}")
     print(f"输出目录: {output_root}")
+    print(f"采集名称: {args.session_name or joint_key}")
     print("-" * 72)
 
     # ---- 运行 ----
@@ -174,6 +177,7 @@ def main(argv=None) -> int:
         calib_file=calib_file,
         auto_calib_at_s=auto_calib_at,
         source_label=source_label,
+        session_name=args.session_name or joint_key,
         kalman_var_gyr=kalman_var_gyr,
         kalman_var_acc=kalman_var_acc,
     )

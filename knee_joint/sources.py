@@ -101,7 +101,7 @@ class CsvReplaySource:
 
     path 可以是:
       - 目录：读取目录下所有 *.csv，每个文件视为一个 device_id 的数据流
-        （正好对应 data/raw/joint_angle_<ts>/<device_id>.csv 的布局）
+        （正好对应 data/raw/<采集名称>_<ts>/<device_id>.csv 的布局）
       - 单个文件：按 device_id 列自行分组
 
     speed:

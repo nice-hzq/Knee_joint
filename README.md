@@ -42,13 +42,13 @@ python run.py
 ```
 
 左侧选串口与波特率 → 点「配置设备映射」把两个传感器的 `WT****` 编号分别绑定到大腿 / 小腿别名
-→ 「▶ 开始测量」→ 保持静止站立后点「开始校准」→ 开始活动，右侧实时出曲线。
+→ 填写本次“采集名称” → 「▶ 开始测量」→ 保持静止站立后点「开始校准」→ 开始活动，右侧实时出曲线。
 
 ### 命令行
 
 ```bash
 # 实时串口
-python run_cli.py --port COM8 --joint right_knee
+python run_cli.py --port COM8 --joint right_knee --session-name "深蹲测试01"
 
 # 离线回放（全速跑完，用已有标定文件复现）
 python run_cli.py --replay samples/joint_angle_20260716_093022 \
@@ -56,7 +56,7 @@ python run_cli.py --replay samples/joint_angle_20260716_093022 \
                   --calib-file temp/right_knee_pose_calib.json
 
 # 离线回放（按真实时间 1:1 播放，便于观察曲线）
-python run_cli.py --replay data/raw/joint_angle_20260910_101500 --speed 1
+python run_cli.py --replay "data/raw/深蹲测试01_20261012_153000" --speed 1
 ```
 
 `--replay` 既可以传单个 `<device_id>.csv`，也可以传一个目录（目录内每个 `<device_id>.csv` 视为一路数据流）。
@@ -119,12 +119,19 @@ python run_cli.py --replay data/raw/joint_angle_20260910_101500 --speed 1
 
 ## 输出
 
+GUI 中的“采集名称”或 CLI 的 `--session-name` 决定本次会话名称，程序自动追加时间戳。
+中文、英文、数字、空格、下划线和短横线会保留，Windows 非法字符会替换为下划线；
+若目录重名，则自动追加 `_02`、`_03`。原始数据与关节角数据始终使用相同的会话 ID。
+
 ```
 data/
-├─ raw/joint_angle_<YYYYMMDD_HHMMSS>/<device_id>.csv   原始 16 列，仅写实际参与配对的帧
-└─ joint_angle_<YYYYMMDD_HHMMSS>/
-   ├─ joint_angle_data.csv    time_s + Mahony 三轴角 + kalman_* 三轴角
-   └─ session_info.json       会话元数据（ROM、同步统计、数据源等）
+├─ raw/
+│  └─ <采集名称>_<YYYYMMDD_HHMMSS>/
+│     └─ <device_id>.csv       原始 16 列，仅写实际参与配对的帧
+└─ joint_angles/
+   └─ <采集名称>_<YYYYMMDD_HHMMSS>/
+      ├─ joint_angle_data.csv  time_s + Mahony 三轴角 + kalman_* 三轴角
+      └─ session_info.json     会话名称、数据路径、ROM、同步统计等
 ```
 
 原始 CSV 的 16 列：

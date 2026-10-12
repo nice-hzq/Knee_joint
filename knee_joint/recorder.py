@@ -4,9 +4,9 @@
 Session recording — 原始同步帧 + 关节角度序列落盘。
 
 输出布局:
-    <output_root>/raw/joint_angle_<YYYYMMDD_HHMMSS>/<device_id>.csv   原始 16 列
-    <output_root>/joint_angle_<YYYYMMDD_HHMMSS>/joint_angle_data.csv  角度序列
-    <output_root>/joint_angle_<YYYYMMDD_HHMMSS>/session_info.json     会话元数据
+    <output_root>/raw/<采集名称>_<YYYYMMDD_HHMMSS>/<device_id>.csv
+    <output_root>/joint_angles/<采集名称>_<YYYYMMDD_HHMMSS>/joint_angle_data.csv
+    <output_root>/joint_angles/<采集名称>_<YYYYMMDD_HHMMSS>/session_info.json
 
 原始 CSV **只记录真正参与了同步配对并用于输出角度的帧**，不是全量串口流。
 """
@@ -26,20 +26,62 @@ KALMAN_ANGLES_HEADER = [
     "kalman_flexion_deg", "kalman_abduction_deg", "kalman_rotation_deg",
 ]
 
+_WINDOWS_RESERVED_NAMES = {
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
+
+
+def sanitize_session_name(name: str) -> str:
+    """生成可安全用作 Windows 目录名的采集名称，同时保留中文和空格。"""
+    text = " ".join(str(name or "").strip().split())
+    safe = "".join(
+        c if c.isalnum() or c in " _-" else "_"
+        for c in text
+        if ord(c) >= 32
+    ).strip(" ._-")
+    safe = safe[:80].rstrip(" ._-") or "session"
+    if safe.upper() in _WINDOWS_RESERVED_NAMES:
+        safe = f"session_{safe}"
+    return safe
+
 
 class SessionRecorder:
     """把一次测量会话的原始帧与角度序列写入磁盘。"""
 
     def __init__(self, output_root: str, session_timestamp: Optional[str] = None,
-                 save_raw: bool = True):
+                 save_raw: bool = True, session_name: Optional[str] = None):
         self.output_root = os.path.abspath(output_root)
         self.session_timestamp = session_timestamp or time.strftime("%Y%m%d_%H%M%S")
         self.save_raw = save_raw
+
+        self.session_name = str(session_name or "").strip() or "session"
+        safe_name = sanitize_session_name(self.session_name)
+        safe_timestamp = sanitize_session_name(self.session_timestamp).replace(" ", "_")
+        self.raw_root = os.path.join(self.output_root, "raw")
+        self.joint_angles_root = os.path.join(self.output_root, "joint_angles")
+        self.session_id = self._unique_session_id(
+            f"{safe_name}_{safe_timestamp}")
+        self._raw_dir_path = os.path.join(self.raw_root, self.session_id)
+        self._session_dir_path = os.path.join(
+            self.joint_angles_root, self.session_id)
 
         self.raw_dir: Optional[str] = None
         self.raw_total_rows = 0
         self._raw_writers: dict = {}
         self._raw_save_failed = False
+
+    def _unique_session_id(self, base_id: str) -> str:
+        """若同名会话已存在，追加 _02、_03，且两类数据始终共享同一 ID。"""
+        candidate = base_id
+        suffix = 2
+        while (os.path.exists(os.path.join(self.output_root, "raw", candidate)) or
+               os.path.exists(os.path.join(
+                   self.output_root, "joint_angles", candidate))):
+            candidate = f"{base_id}_{suffix:02d}"
+            suffix += 1
+        return candidate
 
     # ========================================================
     # 原始同步帧
@@ -57,8 +99,7 @@ class SessionRecorder:
         try:
             if device_id not in self._raw_writers:
                 if self.raw_dir is None:
-                    self.raw_dir = os.path.join(
-                        self.output_root, "raw", f"joint_angle_{self.session_timestamp}")
+                    self.raw_dir = self._raw_dir_path
                     os.makedirs(self.raw_dir, exist_ok=True)
 
                 filepath = os.path.join(
@@ -118,8 +159,7 @@ class SessionRecorder:
             if n < 2:
                 return None
 
-            session_dir = os.path.join(
-                self.output_root, f"joint_angle_{self.session_timestamp}")
+            session_dir = self._session_dir_path
             os.makedirs(session_dir, exist_ok=True)
 
             # ---- 角度 CSV ----
@@ -148,6 +188,8 @@ class SessionRecorder:
             # ---- 会话信息 JSON ----
             sync = dict(meta.get("sync") or {})
             session_info = {
+                "session_name": self.session_name,
+                "session_id": self.session_id,
                 "joint_key": meta.get("joint_key", ""),
                 "proximal_sensor": meta.get("proximal_sensor", ""),
                 "distal_sensor": meta.get("distal_sensor", ""),
@@ -171,6 +213,7 @@ class SessionRecorder:
                 "sync_avg_dt_ms": sync.get("sync_avg_dt_ms", 0.0),
                 "sync_max_dt_ms": sync.get("sync_max_dt_ms", 0.0),
                 "raw_data_dir": self.raw_dir or "",
+                "joint_angle_data_dir": session_dir,
                 "raw_sample_count": self.raw_total_rows,
             }
             if kalman_state is not None:
